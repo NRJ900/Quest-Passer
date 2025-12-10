@@ -1,0 +1,5 @@
+Link 1: https://discord.com/api/applications/detectable
+
+
+
+Link 2: http://gist.githubusercontent.com/DeadSix27/b8e377c9fed6d98bff22dcdf8807e207/raw/52d1f2d31be7168a0486a3a355e06a2d751bdc44/gameslist.json
