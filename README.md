@@ -10,17 +10,16 @@ A lightweight, modern utility to help you complete Discord Quests by simulating 
 - **Quest Queue**: Create a playlist of games. The app will run each for 15 minutes and 30 seconds (configurable) and automatically move to the next.
 - **Custom Games**: Add any Discord Application ID manually to support new or unlisted games.
 - **Queue Estimator**: Real-time estimation of when your quest queue will finish.
-- **Mini-Mode**: Toggle to a minimal interface for background running.
 - **Modern UI**: Sleek dark mode design with glassmorphism and smooth animations.
 
 ## ⚠️ Disclaimer & Terms of Service
 
 ### Educational Purpose Only
-This project was created by **nrj900** purely for **educational purposes** to demonstrate system programming, Win32 API integration in Rust, and modern React interface design.
+This project was created purely for **educational purposes** to demonstrate system programming, Win32 API integration in Rust, and modern React interface design.
 
 ### Liability
 **By downloading or using this software, you agree that:**
-1.  The creator (**nrj900**) and any contributors are **NOT responsible** for any consequences to your Discord account or computer system.
+1.  The creator (**nrj900**) and any contributors are **NOT responsible** for any consequences to your Discord account.
 2.  You are using this software entirely at your own risk.
 3.  We are not liable for any account suspensions, bans, warnings, or loss of access to Discord services that may result from the use of this tool.
 
@@ -35,7 +34,7 @@ While this tool primarily simulates Rich Presence (RPC) activity—which is gene
 
 ## 🛠️ Installation & Usage
 
-1.  **Download**: Get the latest `.exe` installer from the [Releases](https://github.com/nrj900/overhaul-discord-questpasser/releases) page.
+1.  **Download**: Get the latest `.exe` installer from the [Releases](https://github.com/NRJ900/Quest-Passer/releases) page.
 2.  **Install**: Run the setup file.
 3.  **Run**: Open **Quest Passer**.
 4.  **Play**:
