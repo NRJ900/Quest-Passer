@@ -2,7 +2,7 @@
 
 A lightweight, modern utility to help you complete Discord Quests by simulating game processes without installing the actual games.
 
-![Quest Passer](https://img.shields.io/badge/Version-1.0.0-blue.svg)
+![Quest Passer](https://img.shields.io/badge/Version-1.0.1-blue.svg)
 
 ## 🚀 Features
 
