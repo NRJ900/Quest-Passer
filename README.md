@@ -1,5 +1,7 @@
 # Quest Passer
 
+> Enhanced Version of my previous manual method [DiscordQuestPasser-or-AppNamer](https://github.com/NRJ900/DiscordQuestPasser-or-AppNamer).
+
 A lightweight, modern utility to help you complete Discord Quests by simulating game processes without installing the actual games.
 
 ![Quest Passer](https://img.shields.io/badge/Version-1.0.1-blue.svg)
