@@ -1,0 +1,184 @@
+name: 'publish'
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-tauri:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'windows-latest'
+            args: ''
+            x-target: 'win32-x64'
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'npm'
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-registry-
+      
+      - name: Cache Cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-index-
+
+      - name: Get Game List
+        shell: bash
+        env:
+          GAME_LIST_URL: ${{ secrets.GAME_LIST_URL }}
+        run: |
+          curl -L -o src/assets/gamelist.json $GAME_LIST_URL
+          if [ ! -f src/assets/gamelist.json ]; then
+            echo "Failed to download game list"
+            exit 1
+          fi
+          if [ ! -s src/assets/gamelist.json ]; then
+            echo "Game list is empty"
+            exit 1
+          fi
+      
+      # Build runner (dummy game executable)
+      - name: Build runner project x86_64 binary
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: | 
+          cd runner
+          cargo build --release --verbose
+          cd ..
+          cp ./runner/target/release/runner.exe ./src-tauri/resources/runner.exe
+
+      - name: Rust cache (Tauri App)
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+    
+      - name: install frontend dependencies
+        run: npm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.args }}
+      
+      - name: Create artifact for release
+        id: create_artifact_for_release
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-win-release
+          path: |
+            src-tauri/target/release/Quest-Passer.exe
+            src-tauri/target/release/bundle/
+            src-tauri/target/release/resources/
+
+  release:
+    needs: build-tauri
+    runs-on: ubuntu-latest
+    steps:
+      - name: get version
+        id: extract_version
+        run: |
+          version=$(date +"%Y.%m.%d")
+          echo "version=$version" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tauri-win-release
+          path: tauri-win-release
+
+      - name: prepare files
+        env:
+          version: ${{ env.version }}
+          win_build_release_dir: Quest-Passer-win32-x64-${{ env.version }}
+        run: |
+          mkdir -p ./build/${{ env.win_build_release_dir }}
+          cp tauri-win-release/Quest-Passer.exe ./build/${{ env.win_build_release_dir }}/
+          cp -r tauri-win-release/resources/ ./build/${{ env.win_build_release_dir }}/
+          zip -r ./build/${{ env.win_build_release_dir }}.zip ./build/${{ env.win_build_release_dir }}
+          echo "win_build_release_dir=${{ env.win_build_release_dir }}" >> $GITHUB_ENV
+
+      - name: Create Build Artifacts
+        uses: actions/upload-artifact@v4
+        env: 
+          win_build_release_dir: ${{ env.win_build_release_dir }}
+        with:
+          name: ${{ env.win_build_release_dir }}.zip
+          path: | 
+            ./build/${{ env.win_build_release_dir }}.zip
+            tauri-win-release/bundle/**/*
+
+      - name: Create and Upload Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.version }}
+          name: Release ${{ env.version }}
+          body: |
+            ![GitHub Downloads (specific asset, specific tag)](https://img.shields.io/github/downloads/NRJ900/Quest-Passer/${{ env.version }}/${{ env.win_build_release_dir }}.zip)
+
+            ### 🎮 Quest Passer - Discord Quest Automation
+
+            A lightweight, modern utility to help you complete Discord Quests by simulating game processes without installing the actual games.
+
+            #### ⚠️ Disclaimer
+            This tool is intended for **educational purposes** and personal use only. Please respect Discord's Terms of Service and Community Guidelines when using this application.
+
+            **By downloading or using this software, you agree that:**
+            - The creator (**nrj900**) and any contributors are **NOT responsible** for any consequences to your Discord account
+            - You are using this software entirely at your own risk
+            - We are not liable for any account suspensions, bans, warnings, or loss of access to Discord services
+
+            #### 📦 What's Included
+            - Quest-Passer.exe (main application)
+            - resources/ (required game runner files)
+
+            #### 🚀 Installation
+            1. Download the `.zip` file below
+            2. Extract to a location where you have write permissions
+            3. Run `Quest-Passer.exe`
+            4. Enjoy!
+
+            ---
+
+            **Note:** This project is not affiliated with, endorsed by, or connected to Discord Inc. in any way.
+          append_body: true
+          generate_release_notes: true
+          files: |
+            ./build/${{ env.win_build_release_dir }}.zip
+          prerelease: false
+          draft: true
+        env:
+          version: ${{ env.version }}
+          win_build_release_dir: ${{ env.win_build_release_dir }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
