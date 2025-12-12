@@ -31,17 +31,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 8
-          run_install: false
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
-          cache: 'pnpm'
+          cache: 'npm'
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -91,7 +85,7 @@ jobs:
           workspaces: './src-tauri -> target'
 
       - name: Install frontend dependencies
-        run: pnpm install
+        run: npm install
 
       - uses: tauri-apps/tauri-action@v0
         env:
@@ -104,24 +98,22 @@ jobs:
         id: create_artifact_for_release
         uses: actions/upload-artifact@v4
         with:
-          name: quest-passer-win-release
+          name: Quest-Passer-win-release
           retention-days: 3
           path: |
-            src-tauri/target/release/quest-passer.exe
+            src-tauri/target/release/Quest-Passer.exe
             src-tauri/target/release/bundle/
-            src-tauri/target/release/data/
             src-tauri/target/release/resources/
 
       - name: Create artifact (debug)
         id: create_artifact_debug
         uses: actions/upload-artifact@v4
         with:
-          name: quest-passer-win-debug
+          name: Quest-Passer-win-debug
           retention-days: 3
           path: |
-            src-tauri/target/debug/quest-passer.exe
+            src-tauri/target/debug/Quest-Passer.exe
             src-tauri/target/debug/bundle/
-            src-tauri/target/debug/data/
             src-tauri/target/debug/resources/
 
   release-check:
@@ -138,26 +130,24 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          pattern: quest-passer-win-*
+          pattern: Quest-Passer-win-*
           merge-multiple: false
 
       - name: Prepare files
         env:
           version: ${{ env.version }}
-          win_build_release_dir: quest-passer-win32-x64-${{ env.version }}
-          win_build_debug_dir: quest-passer-win32-x64-debug-${{ env.version }}
+          win_build_release_dir: Quest-Passer-win32-x64-${{ env.version }}
+          win_build_debug_dir: Quest-Passer-win32-x64-debug-${{ env.version }}
         run: |
           mkdir -p ./build/${{ env.win_build_release_dir }}
-          cp quest-passer-win-release/quest-passer.exe ./build/${{ env.win_build_release_dir }}/ || true
-          cp -r quest-passer-win-release/data/ ./build/${{ env.win_build_release_dir }}/ || true
-          cp -r quest-passer-win-release/resources/ ./build/${{ env.win_build_release_dir }}/ || true
+          cp Quest-Passer-win-release/Quest-Passer.exe ./build/${{ env.win_build_release_dir }}/ || true
+          cp -r Quest-Passer-win-release/resources/ ./build/${{ env.win_build_release_dir }}/ || true
           cd ./build && zip -r ${{ env.win_build_release_dir }}.zip ${{ env.win_build_release_dir }}
           cd ..
           
           mkdir -p ./build/${{ env.win_build_debug_dir }}
-          cp quest-passer-win-debug/quest-passer.exe ./build/${{ env.win_build_debug_dir }}/ || true
-          cp -r quest-passer-win-debug/data/ ./build/${{ env.win_build_debug_dir }}/ || true
-          cp -r quest-passer-win-debug/resources/ ./build/${{ env.win_build_debug_dir }}/ || true
+          cp Quest-Passer-win-debug/Quest-Passer.exe ./build/${{ env.win_build_debug_dir }}/ || true
+          cp -r Quest-Passer-win-debug/resources/ ./build/${{ env.win_build_debug_dir }}/ || true
           cd ./build && zip -r ${{ env.win_build_debug_dir }}.zip ${{ env.win_build_debug_dir }}
           cd ..
 
@@ -189,7 +179,7 @@ jobs:
         with:
           name: installers-release-${{ env.version }}
           retention-days: 3
-          path: ./quest-passer-win-release/bundle/**/*
+          path: ./Quest-Passer-win-release/bundle/**/*
 
       - name: Upload Debug Bundles
         uses: actions/upload-artifact@v4
@@ -198,4 +188,4 @@ jobs:
         with:
           name: installers-debug-${{ env.version }}
           retention-days: 3
-          path: ./quest-passer-win-debug/bundle/**/*
+          path: ./Quest-Passer-win-debug/bundle/**/*
