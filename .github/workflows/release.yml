@@ -12,26 +12,65 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest, macos-latest]
+        platform: [windows-latest]
     runs-on: ${{ matrix.platform }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: lts/*
+          cache: 'npm'
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
 
-      - name: Install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-20.04'
+      - name: Cache Cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-registry-
+      
+      - name: Cache Cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-index-
+
+      - name: Get Game List
+        shell: bash
+        env:
+          GAME_LIST_URL: ${{ secrets.GAME_LIST_URL }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+          curl -L -o src/assets/gamelist.json $GAME_LIST_URL
+          if [ ! -f src/assets/gamelist.json ]; then
+            echo "Failed to download game list"
+            exit 1
+          fi
+          if [ ! -s src/assets/gamelist.json ]; then
+            echo "Game list is empty"
+            exit 1
+          fi
+      
+      - name: Build runner executable
+        shell: bash
+        run: | 
+          cd runner
+          cargo build --release --verbose
+          cd ..
+          cp ./runner/target/release/runner.exe ./src-tauri/resources/runner.exe
+
+      - name: Rust cache (Tauri App)
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
 
       - name: Install frontend dependencies
         run: npm install
@@ -43,8 +82,19 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: __VERSION__ # the action automatically replaces this with the app version
-          releaseName: 'Quest Passer v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Quest Passer ${{ github.ref_name }}'
+          releaseBody: |
+            ### 🎮 Quest Passer - Discord Quest Automation
+            
+            Complete Discord Quests without installing games!
+
+            #### ⚠️ Disclaimer
+            This tool is for **educational purposes** only. Use at your own risk. The creator is not responsible for any consequences to your Discord account.
+
+            #### 📦 Installation
+            1. Download the installer or portable zip below
+            2. Extract (if zip) and run `Quest-Passer.exe`
+            3. Enjoy!
           releaseDraft: true
           prerelease: false
