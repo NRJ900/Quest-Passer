@@ -57,3 +57,11 @@ npm run tauri dev
 # Build for Windows
 npm run tauri build
 ```
+
+
+## Acknowledgments
+
+> Quest-Passer is built on concepts from my earlier [DiscordQuestPasser-or-AppNamer](https://github.com/NRJ900/DiscordQuestPasser-or-AppNamer) (September 2025) project. 
+
+> Thanks to [discord-quest-completer](https://github.com/markterence/discord-quest-completer) by Mark Terence Tiglao for demonstrating Discord's public detectable games API, which inspired improvements to my earlier manual approach.
+
