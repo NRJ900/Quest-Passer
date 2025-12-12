@@ -1,0 +1,37 @@
+name: Update Detectable Games List
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Daily at midnight UTC
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  update_and_deploy:
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Discord Detectable Games
+        shell: bash
+        run: |
+          mkdir -p dist
+          curl -fsSL -o dist/gamelist.json https://discord.com/api/v9/applications/detectable || echo '[]' > dist/gamelist.json
+          
+          if [ ! -s dist/gamelist.json ]; then
+            echo "Failed to fetch game list"
+            exit 1
+          fi
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
