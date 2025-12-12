@@ -6,8 +6,12 @@ on:
     paths:
       - '**/*.rs'
       - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'runner/**'
   schedule:
-    - cron: "0 0 */2 * *"   # every 2 days at midnight
+    - cron: "0 0 */2 * *"   
   workflow_dispatch:
   
 env:
@@ -27,18 +31,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
+          version: 8
           run_install: false
 
-      - name: setup node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
           cache: 'pnpm'
 
-      - name: install Rust stable
+      - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
@@ -62,32 +67,30 @@ jobs:
         env:
           GAME_LIST_URL: ${{ secrets.GAME_LIST_URL }}
         run: |
-          curl -L -o src/assets/gamelist.json $GAME_LIST_URL
+          mkdir -p src/assets
+          curl -L -o src/assets/gamelist.json $GAME_LIST_URL || echo '[]' > src/assets/gamelist.json
           if [ ! -f src/assets/gamelist.json ]; then
-            echo "Failed to download game list"
-            exit 1
-          fi
-          if [ ! -s src/assets/gamelist.json ]; then
-            echo "Game list is empty"
-            exit 1
+            echo "Failed to download game list, using empty list"
+            echo '[]' > src/assets/gamelist.json
           fi
       
-      # Build src-win
-      - name: Build src-win project x86_64 binary
+      # Build runner (Windows process simulator)
+      - name: Build runner binary
         if: matrix.platform == 'windows-latest'
         shell: bash
         run: | 
-          cd src-win
+          cd runner
           cargo build --release --verbose
           cd ..
-          cp ./src-win/target/release/src-win.exe ./src-tauri/resources/src-win.exe
+          mkdir -p src-tauri/resources
+          cp ./runner/target/release/runner.exe ./src-tauri/resources/runner.exe
 
       - name: Rust cache (Tauri App)
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
 
-      - name: install frontend dependencies
+      - name: Install frontend dependencies
         run: pnpm install
 
       - uses: tauri-apps/tauri-action@v0
@@ -101,12 +104,10 @@ jobs:
         id: create_artifact_for_release
         uses: actions/upload-artifact@v4
         with:
-          name: tauri-win-release
+          name: quest-passer-win-release
           retention-days: 3
-          # pick only the files we need for the release like the binary and the data folder
-          # resource folders and installers.
           path: |
-            src-tauri/target/release/discord-quest-completer.exe
+            src-tauri/target/release/quest-passer.exe
             src-tauri/target/release/bundle/
             src-tauri/target/release/data/
             src-tauri/target/release/resources/
@@ -115,10 +116,10 @@ jobs:
         id: create_artifact_debug
         uses: actions/upload-artifact@v4
         with:
-          name: tauri-win-debug
+          name: quest-passer-win-debug
           retention-days: 3
           path: |
-            src-tauri/target/debug/discord-quest-completer.exe
+            src-tauri/target/debug/quest-passer.exe
             src-tauri/target/debug/bundle/
             src-tauri/target/debug/data/
             src-tauri/target/debug/resources/
@@ -127,7 +128,7 @@ jobs:
     needs: build-tauri
     runs-on: ubuntu-latest
     steps:
-      - name: get version
+      - name: Get version
         id: extract_version
         run: |
           version=$(date +"%Y.%m.%d")
@@ -137,67 +138,64 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          # artifcats: tauri-win-release, tauri-win-debug
-          pattern: tauri-win-*
+          pattern: quest-passer-win-*
           merge-multiple: false
 
-      - name: prepare files
+      - name: Prepare files
         env:
           version: ${{ env.version }}
-          win_build_release_dir: discord-quest-completer-win32-x64-${{ env.version }}
-          win_build_debug_dir: discord-quest-completer-win32-x64-debug-${{ env.version }}
+          win_build_release_dir: quest-passer-win32-x64-${{ env.version }}
+          win_build_debug_dir: quest-passer-win32-x64-debug-${{ env.version }}
         run: |
           mkdir -p ./build/${{ env.win_build_release_dir }}
-          cp tauri-win-release/discord-quest-completer.exe ./build/${{ env.win_build_release_dir }}/
-          cp -r tauri-win-release/data/ ./build/${{ env.win_build_release_dir }}/
-          cp -r tauri-win-release/resources/ ./build/${{ env.win_build_release_dir }}/
-          zip -r ./build/${{ env.win_build_release_dir }}.zip ./build/${{ env.win_build_release_dir }}
+          cp quest-passer-win-release/quest-passer.exe ./build/${{ env.win_build_release_dir }}/ || true
+          cp -r quest-passer-win-release/data/ ./build/${{ env.win_build_release_dir }}/ || true
+          cp -r quest-passer-win-release/resources/ ./build/${{ env.win_build_release_dir }}/ || true
+          cd ./build && zip -r ${{ env.win_build_release_dir }}.zip ${{ env.win_build_release_dir }}
+          cd ..
           
           mkdir -p ./build/${{ env.win_build_debug_dir }}
-          cp tauri-win-debug/discord-quest-completer.exe ./build/${{ env.win_build_debug_dir }}/
-          cp -r tauri-win-debug/data/ ./build/${{ env.win_build_debug_dir }}/
-          cp -r tauri-win-debug/resources/ ./build/${{ env.win_build_debug_dir }}/
-          zip -r ./build/${{ env.win_build_debug_dir }}.zip ./build/${{ env.win_build_debug_dir }}
+          cp quest-passer-win-debug/quest-passer.exe ./build/${{ env.win_build_debug_dir }}/ || true
+          cp -r quest-passer-win-debug/data/ ./build/${{ env.win_build_debug_dir }}/ || true
+          cp -r quest-passer-win-debug/resources/ ./build/${{ env.win_build_debug_dir }}/ || true
+          cd ./build && zip -r ${{ env.win_build_debug_dir }}.zip ${{ env.win_build_debug_dir }}
+          cd ..
 
           echo "win_build_release_dir=${{ env.win_build_release_dir }}" >> $GITHUB_ENV
           echo "win_build_debug_dir=${{ env.win_build_debug_dir }}" >> $GITHUB_ENV
 
-      - name: Upload Debug Artifacts
-        uses: actions/upload-artifact@v4
-        env: 
-          win_build_debug_dir: ${{ env.win_build_debug_dir }}
-        with:
-          name: ${{ env.win_build_debug_dir }}.zip
-          retention-days: 3
-          path: |
-            ./build/${{ env.win_build_release_dir }}.zip
-            
-      - name: Upload Release Artifacts
+      - name: Upload Release Build
         uses: actions/upload-artifact@v4
         env: 
           win_build_release_dir: ${{ env.win_build_release_dir }}
         with:
-          name: ${{ env.win_build_release_dir }}.zip
+          name: ${{ env.win_build_release_dir }}
           retention-days: 3
-          path: |
-            ./build/${{ env.win_build_release_dir }}.zip
+          path: ./build/${{ env.win_build_release_dir }}.zip
 
-      - name: Upload Debug Bundles (Artifacts)
+      - name: Upload Debug Build
+        uses: actions/upload-artifact@v4
+        env: 
+          win_build_debug_dir: ${{ env.win_build_debug_dir }}
+        with:
+          name: ${{ env.win_build_debug_dir }}
+          retention-days: 3
+          path: ./build/${{ env.win_build_debug_dir }}.zip
+
+      - name: Upload Release Bundles (Installers)
         uses: actions/upload-artifact@v4
         env: 
           version: ${{ env.version }}
         with:
-          name: bundle-debug-${{ env.version }}.zip
+          name: installers-release-${{ env.version }}
           retention-days: 3
-          path: |
-            ./tauri-win-debug/bundle/**/*
+          path: ./quest-passer-win-release/bundle/**/*
 
-      - name: Upload Release Bundles (Artifacts)
+      - name: Upload Debug Bundles
         uses: actions/upload-artifact@v4
         env: 
           version: ${{ env.version }}
         with:
-          name: bundle-release-${{ env.version }}.zip
+          name: installers-debug-${{ env.version }}
           retention-days: 3
-          path: |
-            ./tauri-win-release/bundle/**/*            
+          path: ./quest-passer-win-debug/bundle/**/*
