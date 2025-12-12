@@ -1,0 +1,69 @@
+changelog:
+  categories:
+    - title: '🚀 Features'
+      labels:
+        - 'enhancement'
+        - 'feature'
+    - title: '🐛 Bug Fixes'
+      labels:
+        - 'bug'
+        - 'fix'
+    - title: '⚙️ Refactoring'
+      labels:
+        - 'refactor'
+    - title: '🧩 UI/UX'
+      labels:
+        - 'UI/UX'
+        - 'ui'
+        - 'ux'
+        - 'design'
+    - title: '📚 Documentation'
+      labels:
+        - 'documentation'
+        - 'docs'
+    - title: '🔒 Security'
+      labels:
+        - 'security'
+        - 'vulnerability'
+    - title: '🧰 GitHub Actions'
+      labels:
+        - 'github_actions'
+        - 'ci/cd'
+        - 'workflow'
+    - title: '🦀 Rust Backend'
+      labels:
+        - 'rust'
+        - 'backend'
+    - title: '⚛️ React Frontend'
+      labels:
+        - 'react'
+        - 'frontend'
+    - title: '📃 Scripting'
+      labels:
+        - 'script'
+    - title: '🧪 Testing'
+      labels:
+        - 'test'
+        - 'testing'
+    - title: '⚡ Performance'
+      labels:
+        - 'performance'
+        - 'optimization'
+    - title: '🔧 Maintenance'
+      labels:
+        - 'maintenance'
+        - 'chore'
+        - 'dependencies'
+    - title: '📦 Build & Release'
+      labels:
+        - 'build'
+        - 'release'
+    - title: 'Other Changes'
+      labels:
+        - "*"
+  exclude:
+    labels:
+      - 'skip-changelog'
+      - 'duplicate'
+      - 'invalid'
+      - 'wontfix'
